@@ -1,0 +1,14 @@
+// account_update.flow
+var accountName = $Record.Name;
+var accountType = $Record.Type;
+
+if (accountType == "Customer") {
+    var newName = accountName + " - Premium Customer";
+    updateRecord(object: "Account", recordId: $Record.Id, Name: newName);
+    
+    sendEmail(
+        to: "sales@company.com",
+        subject: "Premium Customer Alert",
+        body: "Account " + accountName + " has been marked as premium"
+    );
+}
