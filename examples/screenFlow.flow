@@ -1,0 +1,349 @@
+// customer_onboarding.flow - Complete Screen Flow Example
+// This demonstrates all the screen flow features in FlowScript
+
+// First Screen - Welcome and Basic Information
+screen(name: "Welcome", label: "Customer Onboarding - Welcome") {
+    displayText(text: "Welcome to Acme Corp Customer Onboarding!");
+    displayText(text: "Please complete this quick form to get started with our services.");
+    
+    inputText(name: "customerName", label: "Full Name", required: true);
+    inputText(name: "customerEmail", label: "Email Address", required: true);
+    inputText(name: "customerPhone", label: "Phone Number");
+    
+    inputPicklist(name: "customerType", label: "Customer Type", 
+                 options: ["Individual", "Small Business", "Enterprise"]);
+    
+    inputPicklist(name: "hearAboutUs", label: "How did you hear about us?",
+                 options: ["Website", "Social Media", "Referral", "Advertisement", "Other"]);
+    
+    inputCheckbox(name: "agreeToTerms", label: "I agree to the Terms and Conditions");
+    inputCheckbox(name: "subscribeNewsletter", label: "Subscribe to our newsletter");
+}
+
+// Navigation logic based on customer type and agreement
+navigate(to: "ContactDetails", when: "agreeToTerms == true && customerType == 'Individual'");
+navigate(to: "BusinessDetails", when: "agreeToTerms == true && customerType != 'Individual'");
+navigate(to: "ErrorScreen", when: "agreeToTerms == false");
+
+// Individual Customer Contact Details
+screen(name: "ContactDetails", label: "Contact Information") {
+    displayText(text: "Thank you " + customerName + "! Please provide your contact details:");
+    
+    inputText(name: "streetAddress", label: "Street Address");
+    inputText(name: "city", label: "City");
+    inputText(name: "state", label: "State/Province");
+    inputText(name: "zipCode", label: "ZIP/Postal Code");
+    inputText(name: "country", label: "Country", defaultValue: "United States");
+    
+    inputDate(name: "birthDate", label: "Date of Birth");
+    inputPicklist(name: "preferredContact", label: "Preferred Contact Method",
+                 options: ["Email", "Phone", "Text Message"]);
+    
+    inputNumber(name: "expectedPurchaseAmount", label: "Expected Annual Purchase Amount ($)");
+}
+
+navigate(to: "Preferences");
+
+// Business Customer Details
+screen(name: "BusinessDetails", label: "Business Information") {
+    displayText(text: "Please provide your business information:");
+    
+    inputText(name: "companyName", label: "Company Name", required: true);
+    inputText(name: "jobTitle", label: "Your Job Title");
+    inputText(name: "businessAddress", label: "Business Address");
+    inputText(name: "businessCity", label: "City");
+    inputText(name: "businessState", label: "State/Province");
+    inputText(name: "businessZip", label: "ZIP/Postal Code");
+    
+    inputNumber(name: "employeeCount", label: "Number of Employees");
+    inputNumber(name: "annualRevenue", label: "Annual Revenue ($)");
+    
+    inputPicklist(name: "industry", label: "Industry", 
+                 options: ["Technology", "Healthcare", "Finance", "Manufacturing", 
+                          "Retail", "Education", "Government", "Non-Profit", "Other"]);
+    
+    inputLookup(name: "parentAccount", label: "Parent Account (if applicable)", 
+               object: "Account", displayField: "Name");
+    
+    inputText(name: "taxIdNumber", label: "Tax ID Number");
+    inputText(name: "website", label: "Company Website");
+}
+
+navigate(to: "Preferences");
+
+// Customer Preferences Screen
+screen(name: "Preferences", label: "Service Preferences") {
+    displayText(text: "Please select your service preferences:");
+    
+    inputPicklist(name: "serviceLevel", label: "Service Level",
+                 options: ["Basic", "Professional", "Enterprise"]);
+    
+    inputPicklist(name: "supportLevel", label: "Support Level",
+                 options: ["Self-Service", "Standard Support", "Premium Support"]);
+    
+    inputCheckbox(name: "needsTraining", label: "I need training sessions");
+    inputCheckbox(name: "needsIntegration", label: "I need integration services");
+    inputCheckbox(name: "needsCustomization", label: "I need customization services");
+    
+    inputDate(name: "preferredStartDate", label: "Preferred Start Date");
+    
+    inputText(name: "specialRequirements", label: "Special Requirements or Notes");
+}
+
+navigate(to: "ServiceSelection", when: "serviceLevel == 'Enterprise'");
+navigate(to: "ReviewSummary", when: "serviceLevel != 'Enterprise'");
+
+// Enterprise Service Selection
+screen(name: "ServiceSelection", label: "Enterprise Service Selection") {
+    displayText(text: "Enterprise customers can select additional services:");
+    
+    inputCheckbox(name: "dedicatedAccount", label: "Dedicated Account Manager");
+    inputCheckbox(name: "sla24x7", label: "24/7 SLA Support");
+    inputCheckbox(name: "customReporting", label: "Custom Reporting");
+    inputCheckbox(name: "apiAccess", label: "API Access");
+    inputCheckbox(name: "ssoIntegration", label: "SSO Integration");
+    
+    inputNumber(name: "userLicenses", label: "Number of User Licenses", defaultValue: 50);
+    inputNumber(name: "dataStorage", label: "Data Storage (GB)", defaultValue: 1000);
+    
+    inputPicklist(name: "deploymentType", label: "Deployment Type",
+                 options: ["Cloud", "On-Premise", "Hybrid"]);
+}
+
+navigate(to: "ReviewSummary");
+
+// Review Summary Screen
+screen(name: "ReviewSummary", label: "Review Your Information") {
+    displayText(text: "Please review your information before submitting:");
+    displayText(text: "");
+    displayText(text: "CUSTOMER INFORMATION");
+    displayText(text: "Name: " + customerName);
+    displayText(text: "Email: " + customerEmail);
+    displayText(text: "Phone: " + customerPhone);
+    displayText(text: "Type: " + customerType);
+    displayText(text: "How you heard about us: " + hearAboutUs);
+    displayText(text: "");
+    
+    // Conditional display based on customer type
+    if (customerType == "Individual") {
+        displayText(text: "CONTACT DETAILS");
+        displayText(text: "Address: " + streetAddress + ", " + city + ", " + state + " " + zipCode);
+        displayText(text: "Country: " + country);
+        displayText(text: "Expected Annual Purchase: $" + expectedPurchaseAmount);
+    } else {
+        displayText(text: "BUSINESS DETAILS");
+        displayText(text: "Company: " + companyName);
+        displayText(text: "Job Title: " + jobTitle);
+        displayText(text: "Industry: " + industry);
+        displayText(text: "Employees: " + employeeCount);
+        displayText(text: "Annual Revenue: $" + annualRevenue);
+    }
+    
+    displayText(text: "");
+    displayText(text: "SERVICE PREFERENCES");
+    displayText(text: "Service Level: " + serviceLevel);
+    displayText(text: "Support Level: " + supportLevel);
+    displayText(text: "Preferred Start Date: " + preferredStartDate);
+    
+    inputCheckbox(name: "confirmInformation", label: "I confirm that all information is correct");
+    inputCheckbox(name: "authorizeProcessing", label: "I authorize processing of this application");
+}
+
+navigate(to: "ThankYou", when: "confirmInformation == true && authorizeProcessing == true");
+
+// Thank You Screen
+screen(name: "ThankYou", label: "Thank You!") {
+    displayText(text: "Thank you for your application!");
+    displayText(text: "We have received your information and will contact you within 1-2 business days.");
+    displayText(text: "");
+    displayText(text: "Your reference number is: REF-" + customerName.substring(0, 3).toUpperCase() + "-" + $Flow.CurrentDateTime);
+    displayText(text: "");
+    displayText(text: "What happens next?");
+    displayText(text: "1. Our team will review your application");
+    displayText(text: "2. We'll contact you to discuss your requirements");
+    displayText(text: "3. We'll provide a customized quote");
+    displayText(text: "4. Once approved, we'll begin onboarding");
+}
+
+// Error Screen for users who don't agree to terms
+screen(name: "ErrorScreen", label: "Terms Agreement Required") {
+    displayText(text: "We're sorry, but you must agree to our Terms and Conditions to proceed.");
+    displayText(text: "Please go back and review our terms, or contact us if you have questions.");
+    displayText(text: "");
+    displayText(text: "Contact Information:");
+    displayText(text: "Email: support@acmecorp.com");
+    displayText(text: "Phone: 1-800-ACME-CORP");
+}
+
+// =============================================================================
+// FLOW LOGIC - Executed after screens are completed
+// =============================================================================
+
+// Only process if user confirmed and authorized
+if (confirmInformation == true && authorizeProcessing == true) {
+    
+    // Create different record types based on customer type
+    if (customerType == "Individual") {
+        // Create Contact record for individual customers
+        var contactRecord = createRecord(
+            object: "Contact",
+            FirstName: customerName.split(' ')[0],
+            LastName: customerName.split(' ')[1] || customerName,
+            Email: customerEmail,
+            Phone: customerPhone,
+            MailingStreet: streetAddress,
+            MailingCity: city,
+            MailingState: state,
+            MailingPostalCode: zipCode,
+            MailingCountry: country,
+            Birthdate: birthDate,
+            LeadSource: hearAboutUs,
+            Description: "Individual customer - Expected annual purchase: $" + expectedPurchaseAmount
+        );
+        
+        // Create Opportunity for individual
+        createRecord(
+            object: "Opportunity",
+            Name: customerName + " - " + serviceLevel + " Service",
+            StageName: "Prospecting",
+            CloseDate: preferredStartDate,
+            Amount: expectedPurchaseAmount,
+            Type: "New Customer",
+            LeadSource: hearAboutUs,
+            Description: "Service Level: " + serviceLevel + ", Support: " + supportLevel
+        );
+        
+    } else {
+        // Create Account record for business customers
+        var accountRecord = createRecord(
+            object: "Account",
+            Name: companyName,
+            Type: customerType,
+            Industry: industry,
+            NumberOfEmployees: employeeCount,
+            AnnualRevenue: annualRevenue,
+            Phone: customerPhone,
+            Website: website,
+            BillingStreet: businessAddress,
+            BillingCity: businessCity,
+            BillingState: businessState,
+            BillingPostalCode: businessZip,
+            ParentId: parentAccount,
+            Description: "Service Level: " + serviceLevel + ", Support: " + supportLevel
+        );
+        
+        // Create Contact record for business primary contact
+        createRecord(
+            object: "Contact",
+            FirstName: customerName.split(' ')[0],
+            LastName: customerName.split(' ')[1] || customerName,
+            Email: customerEmail,
+            Phone: customerPhone,
+            Title: jobTitle,
+            AccountId: accountRecord.Id,
+            LeadSource: hearAboutUs
+        );
+        
+        // Create Opportunity for business
+        var opportunityAmount = 0;
+        if (serviceLevel == "Basic") {
+            opportunityAmount = 5000;
+        } else if (serviceLevel == "Professional") {
+            opportunityAmount = 25000;
+        } else if (serviceLevel == "Enterprise") {
+            opportunityAmount = 100000;
+        }
+        
+        createRecord(
+            object: "Opportunity",
+            Name: companyName + " - " + serviceLevel + " Service",
+            AccountId: accountRecord.Id,
+            StageName: "Prospecting",
+            CloseDate: preferredStartDate,
+            Amount: opportunityAmount,
+            Type: "New Customer",
+            LeadSource: hearAboutUs,
+            Description: "Service Level: " + serviceLevel + ", Support: " + supportLevel + 
+                        (specialRequirements ? ", Special Requirements: " + specialRequirements : "")
+        );
+    }
+    
+    // Create Case for follow-up
+    createRecord(
+        object: "Case",
+        Subject: "New Customer Onboarding - " + customerName,
+        Status: "New",
+        Priority: (serviceLevel == "Enterprise") ? "High" : "Medium",
+        Origin: "Web",
+        Type: "New Customer",
+        Description: "Customer Type: " + customerType + 
+                    ", Service Level: " + serviceLevel + 
+                    ", Support Level: " + supportLevel +
+                    (needsTraining ? ", Needs Training" : "") +
+                    (needsIntegration ? ", Needs Integration" : "") +
+                    (needsCustomization ? ", Needs Customization" : "") +
+                    (specialRequirements ? ", Special Requirements: " + specialRequirements : "")
+    );
+    
+    // Send welcome email to customer
+    sendEmail(
+        to: customerEmail,
+        subject: "Welcome to Acme Corp - Application Received",
+        body: "Dear " + customerName + ",\n\n" +
+              "Thank you for your interest in Acme Corp services!\n\n" +
+              "We have received your application for " + serviceLevel + " service level.\n" +
+              "Our team will review your requirements and contact you within 1-2 business days.\n\n" +
+              "If you have any questions, please don't hesitate to contact us.\n\n" +
+              "Best regards,\n" +
+              "Acme Corp Customer Success Team"
+    );
+    
+    // Send internal notification based on customer type and service level
+    var internalEmail = "";
+    var urgencyLevel = "";
+    
+    if (customerType == "Enterprise" || serviceLevel == "Enterprise") {
+        internalEmail = "enterprise-sales@acmecorp.com";
+        urgencyLevel = "HIGH PRIORITY";
+    } else if (customerType == "Small Business" || serviceLevel == "Professional") {
+        internalEmail = "business-sales@acmecorp.com";
+        urgencyLevel = "MEDIUM PRIORITY";
+    } else {
+        internalEmail = "sales@acmecorp.com";
+        urgencyLevel = "STANDARD PRIORITY";
+    }
+    
+    sendEmail(
+        to: internalEmail,
+        subject: urgencyLevel + " - New Customer Application: " + customerName,
+        body: "New customer application received:\n\n" +
+              "Customer: " + customerName + "\n" +
+              "Email: " + customerEmail + "\n" +
+              "Phone: " + customerPhone + "\n" +
+              "Type: " + customerType + "\n" +
+              "Service Level: " + serviceLevel + "\n" +
+              "Support Level: " + supportLevel + "\n" +
+              "Preferred Start Date: " + preferredStartDate + "\n" +
+              "How they heard about us: " + hearAboutUs + "\n\n" +
+              (customerType != "Individual" ? 
+                "Company: " + companyName + "\n" +
+                "Industry: " + industry + "\n" +
+                "Employees: " + employeeCount + "\n" +
+                "Annual Revenue: $" + annualRevenue + "\n\n" : "") +
+              "Special Requirements: " + (specialRequirements || "None") + "\n\n" +
+              "Please follow up within 1-2 business days."
+    );
+    
+    // Send notification to support team if special services requested
+    if (needsTraining == true || needsIntegration == true || needsCustomization == true) {
+        sendEmail(
+            to: "support@acmecorp.com",
+            subject: "New Customer Requires Special Services - " + customerName,
+            body: "Customer " + customerName + " has requested special services:\n\n" +
+                  (needsTraining ? "✓ Training Services\n" : "") +
+                  (needsIntegration ? "✓ Integration Services\n" : "") +
+                  (needsCustomization ? "✓ Customization Services\n" : "") +
+                  "\nPlease coordinate with the sales team for proper resource allocation."
+        );
+    }
+}
