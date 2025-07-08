@@ -446,7 +446,8 @@ class EnhancedFlowScriptTranspiler {
 
     parseConditionToReference(condition) {
         // Simple condition parsing - can be enhanced
-        const match = condition.match(/(\w+)\s*==\s*(.+)/);
+        if (condition === null) { return condition; }
+	const match = condition.match(/(\w+)\s*==\s*(.+)/);
         if (match) {
             return match[1];
         }

@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salesforce Flow XML to Diagram Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: flex;
+            height: calc(100vh - 200px);
+            min-height: 600px;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .upload-area {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            background: rgba(0, 123, 255, 0.05);
+            border-color: #0056b3;
+        }
+
+        .upload-area.dragover {
+            background: rgba(0, 123, 255, 0.1);
+            border-color: #0056b3;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+
+        .diagram-container {
+            flex: 1;
+            background: white;
+            position: relative;
+            overflow: auto;
+        }
+
+        .diagram-svg {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .flow-node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .flow-node:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        }
+
+        .node-rect {
+            fill: #ffffff;
+            stroke: #007bff;
+            stroke-width: 2;
+            rx: 8;
+            ry: 8;
+        }
+
+        .node-text {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            fill: #333;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .node-label {
+            font-weight: 600;
+            font-size: 11px;
+            fill: #666;
+        }
+
+        .connector {
+            stroke: #007bff;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .flow-info {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .flow-info h3 {
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+
+        .flow-info p {
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .node-types {
+            margin-top: 20px;
+        }
+
+        .node-type {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .node-type-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            margin-right: 8px;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Node type colors */
+        .start-node .node-rect { fill: #d4edda; stroke: #28a745; }
+        .assignment-node .node-rect { fill: #d1ecf1; stroke: #17a2b8; }
+        .decision-node .node-rect { fill: #fff3cd; stroke: #ffc107; }
+        .screen-node .node-rect { fill: #f8d7da; stroke: #dc3545; }
+        .action-node .node-rect { fill: #e2e3e5; stroke: #6c757d; }
+        .subflow-node .node-rect { fill: #d4edda; stroke: #28a745; }
+        .wait-node .node-rect { fill: #ffeaa7; stroke: #fdcb6e; }
+        .loop-node .node-rect { fill: #dda0dd; stroke: #9370db; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Salesforce Flow Visualizer</h1>
+            <p>Convert your Salesforce Flow XML files into beautiful, interactive diagrams</p>
+        </div>
+        
+        <div class="content">
+            <div class="sidebar">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <h3>Upload Flow XML</h3>
+                    <p>Drop your .xml file here or click to browse</p>
+                    <input type="file" id="fileInput" accept=".xml" style="display: none;">
+                </div>
+                
+                <div id="flowInfo" class="flow-info hidden">
+                    <h3>Flow Information</h3>
+                    <p><strong>Name:</strong> <span id="flowName">-</span></p>
+                    <p><strong>Status:</strong> <span id="flowStatus">-</span></p>
+                    <p><strong>Type:</strong> <span id="flowType">-</span></p>
+                    <p><strong>Elements:</strong> <span id="elementCount">-</span></p>
+                </div>
+                
+                <div class="node-types">
+                    <h4>Node Types</h4>
+                    <div class="node-type">
+                        <div class="node-type-color" style="background: #28a745;"></div>
+                        <span>Start</span>
+                    </div>
+                    <div class="node-type">
+                        <div class="node-type-color" style="background: #17a2b8;"></div>
+                        <span>Assignment</span>
+                    </div>
+                    <div class="node-type">
+                        <div class="node-type-color" style="background: #ffc107;"></div>
+                        <span>Decision</span>
+                    </div>
+                    <div class="node-type">
+                        <div class="node-type-color" style="background: #dc3545;"></div>
+                        <span>Screen</span>
+                    </div>
+                    <div class="node-type">
+                        <div class="node-type-color" style="background: #6c757d;"></div>
+                        <span>Action</span>
+                    </div>
+                    <div class="node-type">
+                        <div class="node-type-color" style="background: #9370db;"></div>
+                        <span>Loop</span>
+                    </div>
+                </div>
+                
+                <div id="errorMessage" class="error-message hidden"></div>
+            </div>
+            
+            <div class="diagram-container">
+                <div class="controls">
+                    <button class="btn" id="zoomIn">🔍 Zoom In</button>
+                    <button class="btn" id="zoomOut">🔍 Zoom Out</button>
+                    <button class="btn" id="resetZoom">🔄 Reset</button>
+                    <button class="btn btn-secondary" id="exportSVG">💾 Export SVG</button>
+                </div>
+                
+                <div id="loadingState" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p>Processing your flow...</p>
+                </div>
+                
+                <svg id="diagramSVG" class="diagram-svg" viewBox="0 0 1000 600">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#007bff" />
+                        </marker>
+                    </defs>
+                    <g id="diagramGroup" transform="translate(50, 50)">
+                        <text x="450" y="250" text-anchor="middle" font-size="24" fill="#666" opacity="0.5">
+                            Upload a Salesforce Flow XML file to visualize
+                        </text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class FlowVisualizer {
+            constructor() {
+                this.nodes = [];
+                this.connectors = [];
+                this.zoom = 1;
+                this.panX = 0;
+                this.panY = 0;
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.svg = document.getElementById('diagramSVG');
+                this.group = document.getElementById('diagramGroup');
+            }
+
+            setupEventListeners() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('fileInput');
+                
+                uploadArea.addEventListener('click', () => fileInput.click());
+                uploadArea.addEventListener('dragover', this.handleDragOver.bind(this));
+                uploadArea.addEventListener('drop', this.handleDrop.bind(this));
+                fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+                
+                document.getElementById('zoomIn').addEventListener('click', () => this.zoomIn());
+                document.getElementById('zoomOut').addEventListener('click', () => this.zoomOut());
+                document.getElementById('resetZoom').addEventListener('click', () => this.resetView());
+                document.getElementById('exportSVG').addEventListener('click', () => this.exportSVG());
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                e.currentTarget.classList.add('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.processFile(files[0]);
+                }
+            }
+
+            handleFileSelect(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    this.processFile(file);
+                }
+            }
+
+            async processFile(file) {
+                this.showLoading();
+                try {
+                    const text = await file.text();
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(text, 'text/xml');
+                    
+                    if (xml.documentElement.nodeName === 'parsererror') {
+                        throw new Error('Invalid XML format');
+                    }
+                    
+                    this.parseFlowXML(xml);
+                    this.hideLoading();
+                    this.renderDiagram();
+                } catch (error) {
+                    this.showError('Error processing file: ' + error.message);
+                    this.hideLoading();
+                }
+            }
+
+            parseFlowXML(xml) {
+                const flow = xml.documentElement;
+                
+                // Extract flow metadata
+                const flowName = this.getElementText(flow, 'label') || 'Unnamed Flow';
+                const flowStatus = this.getElementText(flow, 'status') || 'Unknown';
+                const flowType = this.getElementText(flow, 'processType') || 'Unknown';
+                
+                this.updateFlowInfo(flowName, flowStatus, flowType);
+                
+                // Parse elements
+                this.nodes = [];
+                this.connectors = [];
+                
+                const elements = [
+                    'start', 'assignments', 'decisions', 'screens', 'actionCalls', 
+                    'subflows', 'waits', 'loops', 'recordCreates', 'recordUpdates',
+                    'recordDeletes', 'recordLookups'
+                ];
+                
+                let yPos = 50;
+                let nodeIndex = 0;
+                
+                elements.forEach(elementType => {
+                    const elementNodes = flow.getElementsByTagName(elementType);
+                    Array.from(elementNodes).forEach(element => {
+                        const node = this.parseElement(element, elementType, nodeIndex++);
+                        if (node) {
+                            node.y = yPos;
+                            node.x = 200 + (nodeIndex % 4) * 200;
+                            if (nodeIndex % 4 === 0) yPos += 150;
+                            this.nodes.push(node);
+                        }
+                    });
+                });
+                
+                // Parse connectors
+                this.parseConnectors(flow);
+                
+                // Auto-layout
+                this.autoLayout();
+            }
+
+            parseElement(element, type, index) {
+                const name = this.getElementText(element, 'name') || 
+                           this.getElementText(element, 'label') || 
+                           `${type}_${index}`;
+                
+                const node = {
+                    id: name,
+                    name: name,
+                    type: this.getNodeType(type),
+                    element: element,
+                    x: 100,
+                    y: 100,
+                    width: 160,
+                    height: 60
+                };
+                
+                // Add type-specific properties
+                if (type === 'decisions') {
+                    node.outcomes = this.parseDecisionOutcomes(element);
+                } else if (type === 'screens') {
+                    node.fields = this.parseScreenFields(element);
+                }
+                
+                return node;
+            }
+
+            getNodeType(elementType) {
+                const typeMap = {
+                    'start': 'start',
+                    'assignments': 'assignment',
+                    'decisions': 'decision',
+                    'screens': 'screen',
+                    'actionCalls': 'action',
+                    'subflows': 'subflow',
+                    'waits': 'wait',
+                    'loops': 'loop',
+                    'recordCreates': 'action',
+                    'recordUpdates': 'action',
+                    'recordDeletes': 'action',
+                    'recordLookups': 'action'
+                };
+                return typeMap[elementType] || 'action';
+            }
+
+            parseDecisionOutcomes(element) {
+                const outcomes = [];
+                const rules = element.getElementsByTagName('rules');
+                Array.from(rules).forEach(rule => {
+                    const name = this.getElementText(rule, 'name') || 'Rule';
+                    const connector = this.getElementText(rule, 'connector');
+                    outcomes.push({ name, connector });
+                });
+                
+                const defaultConnector = this.getElementText(element, 'defaultConnector');
+                if (defaultConnector) {
+                    outcomes.push({ name: 'Default', connector: defaultConnector });
+                }
+                
+                return outcomes;
+            }
+
+            parseScreenFields(element) {
+                const fields = [];
+                const fieldElements = element.getElementsByTagName('fields');
+                Array.from(fieldElements).forEach(field => {
+                    const name = this.getElementText(field, 'name') || 'Field';
+                    const type = this.getElementText(field, 'fieldType') || 'Unknown';
+                    fields.push({ name, type });
+                });
+                return fields;
+            }
+
+            parseConnectors(flow) {
+                this.nodes.forEach(node => {
+                    const element = node.element;
+                    
+                    // Handle different connector types
+                    if (node.type === 'decision' && node.outcomes) {
+                        node.outcomes.forEach(outcome => {
+                            if (outcome.connector) {
+                                this.connectors.push({
+                                    from: node.id,
+                                    to: outcome.connector,
+                                    label: outcome.name
+                                });
+                            }
+                        });
+                    } else {
+                        // Standard connector
+                        const connector = this.getElementText(element, 'connector');
+                        if (connector) {
+                            this.connectors.push({
+                                from: node.id,
+                                to: connector,
+                                label: ''
+                            });
+                        }
+                    }
+                });
+            }
+
+            autoLayout() {
+                if (this.nodes.length === 0) return;
+                
+                // Simple hierarchical layout
+                const startNode = this.nodes.find(n => n.type === 'start');
+                if (startNode) {
+                    startNode.x = 50;
+                    startNode.y = 50;
+                    this.layoutFromNode(startNode, new Set());
+                }
+                
+                // Ensure all nodes are positioned
+                let x = 50, y = 50;
+                this.nodes.forEach(node => {
+                    if (!node.positioned) {
+                        node.x = x;
+                        node.y = y;
+                        x += 200;
+                        if (x > 800) {
+                            x = 50;
+                            y += 150;
+                        }
+                    }
+                });
+            }
+
+            layoutFromNode(node, visited, level = 0) {
+                if (visited.has(node.id)) return;
+                visited.add(node.id);
+                node.positioned = true;
+                
+                const children = this.connectors
+                    .filter(c => c.from === node.id)
+                    .map(c => this.nodes.find(n => n.id === c.to))
+                    .filter(n => n && !visited.has(n.id));
+                
+                children.forEach((child, index) => {
+                    child.x = 50 + (level + 1) * 200;
+                    child.y = 50 + index * 150;
+                    this.layoutFromNode(child, visited, level + 1);
+                });
+            }
+
+            renderDiagram() {
+                this.group.innerHTML = '';
+                
+                // Render connectors first (so they appear behind nodes)
+                this.connectors.forEach(connector => {
+                    this.renderConnector(connector);
+                });
+                
+                // Render nodes
+                this.nodes.forEach(node => {
+                    this.renderNode(node);
+                });
+                
+                this.updateViewBox();
+                this.updateTransform();
+            }
+
+            renderNode(node) {
+                const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                nodeGroup.classList.add('flow-node', `${node.type}-node`);
+                nodeGroup.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+                
+                // Node rectangle
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.classList.add('node-rect');
+                rect.setAttribute('width', node.width);
+                rect.setAttribute('height', node.height);
+                nodeGroup.appendChild(rect);
+                
+                // Node text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.classList.add('node-text');
+                text.setAttribute('x', node.width / 2);
+                text.setAttribute('y', node.height / 2 - 8);
+                text.textContent = node.name;
+                nodeGroup.appendChild(text);
+                
+                // Node type label
+                const typeLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                typeLabel.classList.add('node-label');
+                typeLabel.setAttribute('x', node.width / 2);
+                typeLabel.setAttribute('y', node.height / 2 + 8);
+                typeLabel.textContent = node.type.toUpperCase();
+                nodeGroup.appendChild(typeLabel);
+                
+                // Add click event for details
+                nodeGroup.addEventListener('click', () => {
+                    this.showNodeDetails(node);
+                });
+                
+                this.group.appendChild(nodeGroup);
+            }
+
+            renderConnector(connector) {
+                const fromNode = this.nodes.find(n => n.id === connector.from);
+                const toNode = this.nodes.find(n => n.id === connector.to);
+                
+                if (!fromNode || !toNode) return;
+                
+                // Calculate connection points on node edges
+                const fromCenter = {
+                    x: fromNode.x + fromNode.width / 2,
+                    y: fromNode.y + fromNode.height / 2
+                };
+                const toCenter = {
+                    x: toNode.x + toNode.width / 2,
+                    y: toNode.y + toNode.height / 2
+                };
+                
+                // Calculate the connection points on the edges of the rectangles
+                const fromPoint = this.getConnectionPoint(fromNode, toCenter);
+                const toPoint = this.getConnectionPoint(toNode, fromCenter);
+                
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.classList.add('connector');
+                
+                // Create a curved path
+                const dx = toPoint.x - fromPoint.x;
+                const dy = toPoint.y - fromPoint.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Control points for the curve
+                const controlOffset = Math.min(distance / 4, 50);
+                const control1X = fromPoint.x + (dx > 0 ? controlOffset : -controlOffset);
+                const control1Y = fromPoint.y + controlOffset;
+                const control2X = toPoint.x - (dx > 0 ? controlOffset : -controlOffset);
+                const control2Y = toPoint.y - controlOffset;
+                
+                const pathData = `M ${fromPoint.x} ${fromPoint.y} C ${control1X} ${control1Y}, ${control2X} ${control2Y}, ${toPoint.x} ${toPoint.y}`;
+                path.setAttribute('d', pathData);
+                
+                this.group.appendChild(path);
+                
+                // Add label if present
+                if (connector.label) {
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.classList.add('connector-label');
+                    label.setAttribute('x', (fromPoint.x + toPoint.x) / 2);
+                    label.setAttribute('y', (fromPoint.y + toPoint.y) / 2 - 5);
+                    label.setAttribute('text-anchor', 'middle');
+                    label.setAttribute('font-size', '10');
+                    label.setAttribute('fill', '#666');
+                    label.setAttribute('font-weight', 'bold');
+                    label.setAttribute('stroke', 'white');
+                    label.setAttribute('stroke-width', '2');
+                    label.setAttribute('paint-order', 'stroke');
+                    label.textContent = connector.label;
+                    this.group.appendChild(label);
+                }
+            }
+
+            getConnectionPoint(node, targetCenter) {
+                const nodeCenter = {
+                    x: node.x + node.width / 2,
+                    y: node.y + node.height / 2
+                };
+                
+                const dx = targetCenter.x - nodeCenter.x;
+                const dy = targetCenter.y - nodeCenter.y;
+                
+                // Calculate intersection with rectangle edges
+                const halfWidth = node.width / 2;
+                const halfHeight = node.height / 2;
+                
+                let connectionX, connectionY;
+                
+                if (Math.abs(dx) / halfWidth > Math.abs(dy) / halfHeight) {
+                    // Connection is more horizontal - connect to left or right edge
+                    connectionX = nodeCenter.x + (dx > 0 ? halfWidth : -halfWidth);
+                    connectionY = nodeCenter.y + (dy * halfWidth) / Math.abs(dx);
+                } else {
+                    // Connection is more vertical - connect to top or bottom edge
+                    connectionX = nodeCenter.x + (dx * halfHeight) / Math.abs(dy);
+                    connectionY = nodeCenter.y + (dy > 0 ? halfHeight : -halfHeight);
+                }
+                
+                return { x: connectionX, y: connectionY };
+            }
+
+            showNodeDetails(node) {
+                let details = `Node: ${node.name}\nType: ${node.type}`;
+                
+                if (node.outcomes && node.outcomes.length > 0) {
+                    details += '\nOutcomes:';
+                    node.outcomes.forEach(outcome => {
+                        details += `\n  - ${outcome.name}`;
+                    });
+                }
+                
+                if (node.fields && node.fields.length > 0) {
+                    details += '\nFields:';
+                    node.fields.forEach(field => {
+                        details += `\n  - ${field.name} (${field.type})`;
+                    });
+                }
+                
+                alert(details);
+            }
+
+            updateFlowInfo(name, status, type) {
+                document.getElementById('flowName').textContent = name;
+                document.getElementById('flowStatus').textContent = status;
+                document.getElementById('flowType').textContent = type;
+                document.getElementById('elementCount').textContent = this.nodes.length;
+                document.getElementById('flowInfo').classList.remove('hidden');
+            }
+
+            updateViewBox() {
+                if (this.nodes.length === 0) return;
+                
+                const bounds = this.calculateBounds();
+                const padding = 100;
+                const width = bounds.maxX - bounds.minX + padding * 2;
+                const height = bounds.maxY - bounds.minY + padding * 2;
+                
+                this.svg.setAttribute('viewBox', 
+                    `${bounds.minX - padding} ${bounds.minY - padding} ${width} ${height}`);
+            }
+
+            calculateBounds() {
+                const bounds = {
+                    minX: Infinity,
+                    minY: Infinity,
+                    maxX: -Infinity,
+                    maxY: -Infinity
+                };
+                
+                this.nodes.forEach(node => {
+                    bounds.minX = Math.min(bounds.minX, node.x);
+                    bounds.minY = Math.min(bounds.minY, node.y);
+                    bounds.maxX = Math.max(bounds.maxX, node.x + node.width);
+                    bounds.maxY = Math.max(bounds.maxY, node.y + node.height);
+                });
+                
+                return bounds;
+            }
+
+            getElementText(parent, tagName) {
+                const element = parent.getElementsByTagName(tagName)[0];
+                return element ? element.textContent.trim() : null;
+            }
+
+            showLoading() {
+                document.getElementById('loadingState').classList.remove('hidden');
+            }
+
+            hideLoading() {
+                document.getElementById('loadingState').classList.add('hidden');
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = message;
+                errorDiv.classList.remove('hidden');
+                setTimeout(() => {
+                    errorDiv.classList.add('hidden');
+                }, 5000);
+            }
+
+            zoomIn() {
+                this.zoom *= 1.2;
+                this.updateTransform();
+            }
+
+            zoomOut() {
+                this.zoom /= 1.2;
+                this.updateTransform();
+            }
+
+            resetView() {
+                this.zoom = 1;
+                this.panX = 0;
+                this.panY = 0;
+                this.updateTransform();
+            }
+
+            updateTransform() {
+                const transform = `translate(${this.panX}, ${this.panY}) scale(${this.zoom})`;
+                this.group.setAttribute('transform', transform);
+            }
+
+            exportSVG() {
+                const svgData = new XMLSerializer().serializeToString(this.svg);
+                const blob = new Blob([svgData], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'salesforce-flow-diagram.svg';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // Initialize the visualizer
+        const visualizer = new FlowVisualizer();
+    </script>
+</body>
+</html>
